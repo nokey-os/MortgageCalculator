@@ -26,3 +26,10 @@ python app.py
 3. Укажите процентную ставку
 4. Нажмите «Рассчитать»
 5. Для просмотра детального графика нажмите «График платежей»
+
+<img width="1112" height="870" alt="image" src="https://github.com/user-attachments/assets/05eda8e9-1c93-4f74-a52e-dd36da5d6158" />
+
+<img width="1195" height="710" alt="image" src="https://github.com/user-attachments/assets/062036b8-dd54-4c41-8b05-9881fd9105b4" />
+
+<img width="900" height="857" alt="image" src="https://github.com/user-attachments/assets/db1c1e01-32cb-4a8c-985f-17f104a43919" />
+
