@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ипотечный калькулятор</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
+    <div class="bg-shape shape-4"></div>
+
+    <main class="app-shell">
+      <section class="glass card">
+        <h1>Ипотечный калькулятор</h1>
+        <p class="subtitle">Рассчитайте аннуитетный платеж и сумму переплаты</p>
+
+        <form method="post" class="mortgage-form">
+          <label for="property_price">Стоимость недвижимости, ₽</label>
+          <input
+            id="property_price"
+            name="property_price"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            required
+            value="{{ form_data.property_price }}"
+          />
+
+          <label for="down_payment">Первоначальный взнос, ₽</label>
+          <input
+            id="down_payment"
+            name="down_payment"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            required
+            value="{{ form_data.down_payment }}"
+          />
+
+          <div class="slider-head">
+            <label for="years">Срок ипотеки, лет</label>
+            <output id="years_output">{{ form_data.years }}</output>
+          </div>
+          <input
+            id="years"
+            name="years"
+            type="range"
+            min="1"
+            max="30"
+            step="1"
+            value="{{ form_data.years }}"
+          />
+
+          <label for="annual_rate">Процентная ставка, % годовых</label>
+          <input
+            id="annual_rate"
+            name="annual_rate"
+            type="number"
+            min="0.1"
+            step="0.01"
+            required
+            value="{{ form_data.annual_rate }}"
+          />
+
+          <button type="submit">Рассчитать</button>
+        </form>
+
+        {% if error %}
+        <div class="glass notice error">{{ error }}</div>
+        {% endif %}
+
+        {% if result %}
+        <section class="result-grid">
+          <div class="glass result-item">
+            <span>Сумма кредита</span>
+            <strong>{{ "{:,.2f}".format(result.loan_amount).replace(",", " ") }} ₽</strong>
+          </div>
+          <div class="glass result-item">
+            <span>Аннуитетный платеж / месяц</span>
+            <strong>{{ "{:,.2f}".format(result.monthly_payment).replace(",", " ") }} ₽</strong>
+          </div>
+          <div class="glass result-item">
+            <span>Общая сумма выплат</span>
+            <strong>{{ "{:,.2f}".format(result.total_payment).replace(",", " ") }} ₽</strong>
+          </div>
+          <div class="glass result-item">
+            <span>Переплата за весь срок</span>
+            <strong>{{ "{:,.2f}".format(result.overpayment).replace(",", " ") }} ₽</strong>
+          </div>
+        </section>
+        <section class="glass chart-card">
+          <h2>Соотношение погашения процентов и кредита</h2>
+          <div class="chart-wrap">
+            <canvas
+              id="ratioChart"
+              width="280"
+              height="280"
+              data-principal="{{ result.loan_amount|float }}"
+              data-interest="{{ result.overpayment|float }}"
+            ></canvas>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <span class="dot principal"></span>
+                <span>Тело кредита</span>
+              </div>
+              <div class="legend-item">
+                <span class="dot interest"></span>
+                <span>Проценты</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        <div class="chart-actions">
+          <button type="button" id="openPaymentChart" class="chart-open-btn">График платежей</button>
+        </div>
+
+        <div class="modal-backdrop" id="paymentModal" aria-hidden="true">
+          <section class="glass payment-modal" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+            <div class="modal-header">
+              <h3 id="paymentModalTitle">График платежей по годам</h3>
+              <button type="button" id="closePaymentChart" class="modal-close-btn" aria-label="Закрыть">×</button>
+            </div>
+            <div class="chart-mode-switch" role="tablist" aria-label="Режим графика">
+              <button type="button" class="mode-btn active" data-mode="yearly">По годам</button>
+              <button type="button" class="mode-btn" data-mode="monthly">По месяцам</button>
+            </div>
+            <canvas
+              id="paymentScheduleChart"
+              width="900"
+              height="430"
+              data-yearly-labels='{{ result.schedule_labels|tojson }}'
+              data-yearly-principal='{{ result.principal_by_year|tojson }}'
+              data-yearly-interest='{{ result.interest_by_year|tojson }}'
+              data-monthly-labels='{{ result.monthly_labels|tojson }}'
+              data-monthly-principal='{{ result.principal_by_month|tojson }}'
+              data-monthly-interest='{{ result.interest_by_month|tojson }}'
+            ></canvas>
+            <div class="payment-table-wrap">
+              <table class="payment-table">
+                <thead>
+                  <tr>
+                    <th>Период</th>
+                    <th>Платеж</th>
+                    <th>Проценты</th>
+                    <th>Тело кредита</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+        {% endif %}
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>
