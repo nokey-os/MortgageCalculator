@@ -7,7 +7,10 @@ Flask-приложение для расчёта аннуитетных ипот
 - Расчёт ежемесячного аннуитетного платежа, общей суммы выплат и переплаты
 - Круговая диаграмма соотношения тела кредита и процентов
 - Детальный график платежей с разбивкой по годам и месяцам (столбчатые диаграммы + таблица)
-- Темный интерфейс в стиле glassmorphism
+- Возможность выгрузки в Ecxel
+- Расчет платежей при рассрочке
+- Пересчет платежей при досрочном погашении
+- Темный интерфейс в Античном стиле
 - Автоматическое форматирование чисел (разделение тысяч пробелами)
 
 ## Установка и запуск
@@ -32,4 +35,10 @@ python app.py
 <img width="1195" height="710" alt="image" src="https://github.com/user-attachments/assets/062036b8-dd54-4c41-8b05-9881fd9105b4" />
 
 <img width="900" height="857" alt="image" src="https://github.com/user-attachments/assets/db1c1e01-32cb-4a8c-985f-17f104a43919" />
+
+<img width="737" height="885" alt="image" src="https://github.com/user-attachments/assets/39f60666-eed6-4014-93f8-1b383bf227c9" />
+
+<img width="1041" height="875" alt="image" src="https://github.com/user-attachments/assets/97646764-2a88-4384-a785-97e4ec15c81c" />
+
+
 
