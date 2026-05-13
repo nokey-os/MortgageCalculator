@@ -4,9 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ипотечный калькулятор</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
+      href="{{ url_for('static', filename='style.css') }}?v=1"
     />
   </head>
   <body>
@@ -17,10 +20,27 @@
 
     <main class="app-shell">
       <section class="glass card">
-        <h1>Ипотечный калькулятор</h1>
-        <p class="subtitle">Рассчитайте аннуитетный платеж и сумму переплаты</p>
+        <div class="pediment">
+          <svg viewBox="0 0 240 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M120 2 L238 38 L2 38 Z" stroke="#d4a843" stroke-width="3" fill="none"/>
+            <path d="M120 2 L238 38 L2 38 Z" stroke="#b8922e" stroke-width="1" fill="none" transform="translate(3,3)" opacity="0.5"/>
+            <circle cx="120" cy="28" r="6" stroke="#d4a843" stroke-width="1.5" fill="none"/>
+            <path d="M120 22 L120 34" stroke="#d4a843" stroke-width="1"/>
+            <path d="M114 28 L126 28" stroke="#d4a843" stroke-width="1"/>
+            <path d="M60 30 L80 30" stroke="#d4a843" stroke-width="1" opacity="0.6"/>
+            <path d="M160 30 L180 30" stroke="#d4a843" stroke-width="1" opacity="0.6"/>
+          </svg>
+        </div>
+        <h1>Калькулятор</h1>
+        <p class="subtitle" id="subtitle">{% if installment %}Рассчитайте ежемесячный платёж по рассрочке{% else %}Рассчитайте аннуитетный платеж и сумму переплаты{% endif %}</p>
 
-        <form method="post" class="mortgage-form">
+        <div class="mode-toggle">
+          <button type="button" class="mode-btn mode-toggle-btn {% if not installment %}active{% endif %}" data-mode="mortgage">Ипотека</button>
+          <button type="button" class="mode-btn mode-toggle-btn {% if installment %}active{% endif %}" data-mode="installment">Рассрочка</button>
+          <button type="button" class="mode-btn mode-toggle-btn" id="earlyRepaymentBtn" {% if not result %}style="display:none"{% endif %}>Досрочное погашение</button>
+        </div>
+
+        <form method="post" class="mortgage-form" id="mortgageForm">
           <label for="property_price">Стоимость недвижимости, ₽</label>
           <input
             id="property_price"
@@ -57,18 +77,21 @@
             value="{{ form_data.years }}"
           />
 
-          <label for="annual_rate">Процентная ставка, % годовых</label>
-          <input
-            id="annual_rate"
-            name="annual_rate"
-            type="number"
-            min="0.1"
-            step="0.01"
-            required
-            value="{{ form_data.annual_rate }}"
-          />
+          <div id="rateField" {% if installment %}style="display:none"{% endif %}>
+            <label for="annual_rate">Процентная ставка, % годовых</label>
+            <input
+              id="annual_rate"
+              name="annual_rate"
+              type="number"
+              min="0"
+              step="0.01"
+              {% if not installment %}required{% endif %}
+              value="{{ form_data.annual_rate }}"
+            />
+          </div>
+          <input type="hidden" name="installment" id="installmentInput" value="{% if installment %}1{% endif %}">
 
-          <button type="submit">Рассчитать</button>
+          <button type="submit" id="submitBtn">{% if installment %}Рассчитать рассрочку{% else %}Рассчитать{% endif %}</button>
         </form>
 
         {% if error %}
@@ -76,7 +99,14 @@
         {% endif %}
 
         {% if result %}
+        <script id="resultData" type="application/json">{{ result_dict|tojson }}</script>
         <section class="result-grid">
+          {% if installment %}
+          <div class="glass result-item">
+            <span>Стоимость</span>
+            <strong>{{ "{:,.2f}".format(result.loan_amount + result.down_payment).replace(",", " ") }} ₽</strong>
+          </div>
+          {% endif %}
           <div class="glass result-item">
             <span>Сумма кредита</span>
             <strong>{{ "{:,.2f}".format(result.loan_amount).replace(",", " ") }} ₽</strong>
@@ -124,6 +154,7 @@
           <section class="glass payment-modal" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
             <div class="modal-header">
               <h3 id="paymentModalTitle">График платежей по годам</h3>
+              <button type="button" id="exportExcelBtn" class="modal-export-btn" title="Выгрузить в Excel">Excel</button>
               <button type="button" id="closePaymentChart" class="modal-close-btn" aria-label="Закрыть">×</button>
             </div>
             <div class="chart-mode-switch" role="tablist" aria-label="Режим графика">
@@ -156,10 +187,67 @@
             </div>
           </section>
         </div>
+        <div class="modal-backdrop" id="earlyModal" aria-hidden="true">
+          <section class="glass payment-modal" role="dialog" aria-modal="true" aria-labelledby="earlyModalTitle">
+            <div class="modal-header">
+              <h3 id="earlyModalTitle">Досрочное погашение</h3>
+              <button type="button" id="closeEarlyModal" class="modal-close-btn" aria-label="Закрыть">×</button>
+            </div>
+            <div class="early-form">
+              <div class="early-info">
+                <span>Текущий остаток кредита:</span>
+                <strong id="earlyBalanceDisplay">{{ "{:,.2f}".format(result.loan_amount).replace(",", " ") }} ₽</strong>
+              </div>
+              <label for="earlyAmount">Сумма досрочного погашения, ₽</label>
+              <input id="earlyAmount" type="text" inputmode="numeric" class="early-input" value="">
+              <div class="early-checkboxes">
+                <label class="early-check-label">
+                  <input type="checkbox" id="reducePayment" checked>
+                  <span>Уменьшить платеж</span>
+                </label>
+                <label class="early-check-label">
+                  <input type="checkbox" id="reduceTerm">
+                  <span>Уменьшить срок</span>
+                </label>
+              </div>
+              <button type="button" id="calcEarlyBtn">Рассчитать</button>
+            </div>
+            <div id="earlyResult" style="display:none">
+              <div class="early-summary">
+                <div class="glass result-item">
+                  <span>Новый ежемесячный платёж</span>
+                  <strong id="earlyNewPayment"></strong>
+                </div>
+                <div class="glass result-item">
+                  <span>Новый срок</span>
+                  <strong id="earlyNewMonths"></strong>
+                </div>
+                <div class="glass result-item">
+                  <span>Переплата</span>
+                  <strong id="earlyNewOverpayment"></strong>
+                </div>
+              </div>
+              <div class="payment-table-wrap" style="max-height:200px">
+                <table class="payment-table">
+                  <thead>
+                    <tr>
+                      <th>Месяц</th>
+                      <th>Платеж</th>
+                      <th>Проценты</th>
+                      <th>Тело кредита</th>
+                      <th>Остаток</th>
+                    </tr>
+                  </thead>
+                  <tbody id="earlyTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
         {% endif %}
       </section>
     </main>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=4"></script>
   </body>
 </html>
